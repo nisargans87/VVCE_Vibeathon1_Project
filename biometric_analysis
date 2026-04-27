@@ -1,0 +1,56 @@
+ALGORITHM registerBiometric(userId, credential)
+INPUT: userId of type UUID, credential of type BiometricCredential
+OUTPUT: result of type AuthResponse
+
+BEGIN
+  ASSERT userId IS NOT NULL
+  ASSERT credential IS NOT NULL
+  ASSERT credential.credential_id IS NOT NULL
+  ASSERT credential.public_key IS NOT NULL
+
+  // Step 1: Verify user is in correct state
+  user ← database.findUserById(userId)
+
+  IF user IS NULL THEN
+    RETURN AuthResponse(success: false, error: "User not found")
+  END IF
+
+  IF user.status <> "otp_verified" THEN
+    RETURN AuthResponse(success: false, error: "Complete OTP verification first")
+  END IF
+
+  // Step 2: Verify the WebAuthn attestation
+  challenge ← cache.get("webauthn_challenge:" + userId)
+
+  IF challenge IS NULL THEN
+    RETURN AuthResponse(success: false, error: "Registration challenge expired")
+  END IF
+
+  attestationValid ← webauthn.verifyAttestation(credential, challenge)
+
+  IF NOT attestationValid THEN
+    RETURN AuthResponse(success: false, error: "Biometric verification failed")
+  END IF
+
+  // Step 3: Store credential
+  bioCredential ← NEW BiometricCredential
+  bioCredential.id ← generateUUID()
+  bioCredential.user_id ← userId
+  bioCredential.credential_id ← credential.credential_id
+  bioCredential.public_key ← credential.public_key
+  bioCredential.sign_count ← 0
+  bioCredential.device_name ← credential.device_name
+  bioCredential.created_at ← NOW()
+
+  database.saveBiometricCredential(bioCredential)
+
+  // Step 4: Activate user
+  user.status ← "active"
+  user.biometric_registered ← true
+  user.updated_at ← NOW()
+  database.updateUser(user)
+
+  cache.delete("webauthn_challenge:" + userId)
+
+  RETURN AuthResponse(success: true, userId: userId, message: "Registration complete")
+END
