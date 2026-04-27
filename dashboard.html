@@ -1,0 +1,42 @@
+from flask import Flask, render_template, request, redirect, url_for, session
+import random
+
+app = Flask(__name__)
+app.secret_key = "safepay_secret"
+
+# Dummy user
+USER = {"email": "user@test.com", "password": "1234"}
+
+@app.route("/", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form["email"]
+        password = request.form["password"]
+
+        if email == USER["email"] and password == USER["password"]:
+            otp = str(random.randint(1000, 9999))
+            session["otp"] = otp
+            print("OTP:", otp)  # shown in terminal
+            return redirect("/verify")
+    return render_template("login.html")
+
+@app.route("/verify", methods=["GET", "POST"])
+def verify():
+    if request.method == "POST":
+        user_otp = request.form["otp"]
+        if user_otp == session.get("otp"):
+            return redirect("/dashboard")
+    return '''
+    <h2>Enter OTP (check terminal)</h2>
+    <form method="post">
+        <input name="otp" required>
+        <button type="submit">Verify</button>
+    </form>
+    '''
+
+@app.route("/dashboard")
+def dashboard():
+    return render_template("dashboard.html")
+
+if __name__ == "__main__":
+    app.run(debug=True)
