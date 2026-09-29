@@ -10,6 +10,7 @@
 ![Language](https://img.shields.io/badge/Language-Python-3776ab?logo=python&logoColor=white)
 ![Framework](https://img.shields.io/badge/Backend-Flask-222222?logo=flask&logoColor=white)
 ![Database](https://img.shields.io/badge/Database-SQLite-003b57?logo=sqlite&logoColor=white)
+![Development tool](https://img.shields.io/badge/Development%20Tool-Kiro%20by%20AWS-232f3e?logo=amazonaws&logoColor=white)
 ![Organization](https://img.shields.io/badge/GitHub%20Organization-VectorFlow--vvce-181717?logo=github&logoColor=white)
 
 ## Hackathon Information
@@ -27,12 +28,12 @@
 
 ## Team Members
 
-| Team Member |
-|---|
-| Nisarga NS |
-| Neha Anjum |
-| Neha BP |
-| Nikhitha |
+| Team Member | Role |
+|---|---|
+| Nisarga NS | Team Lead |
+| Neha Anjum | Team Member |
+| Neha BP | Team Member |
+| Nikhitha | Team Member |
 
 ## Hackathon Journey
 
@@ -40,20 +41,23 @@
 flowchart LR
     A[Level 1 screening] --> B[Selected for offline building level]
     B --> C[8-hour hackathon development]
-    C --> D[FinTech project implementation]
+    C --> D[FinSignal prototype]
 ```
 
 ## Development Status
 
 > "I will verify and develop full working protocol"
 
-The repository contains prototype code and additional partial artifacts. It does not include a complete, reproducibly installable application package.
+**Project stage:** Prototype; it was not fully developed during the hackathon.
+
+## Development Tools
+
+Kiro by AWS was used as a developer tool. Agents fully automated the prototype through prompts.
 
 ## Contents
 
 - [Project Overview](#project-overview)
-- [Problem Statement](#problem-statement)
-- [Objectives](#objectives)
+- [Development Tools](#development-tools)
 - [Key Features](#key-features)
 - [End-to-End Workflow](#end-to-end-workflow)
 - [System Architecture](#system-architecture)
@@ -68,47 +72,35 @@ The repository contains prototype code and additional partial artifacts. It does
 - [Screenshots and Demo](#screenshots-and-demo)
 - [Hackathon Build Context](#hackathon-build-context)
 - [Limitations](#limitations)
-- [Future Enhancements](#future-enhancements)
 - [Team](#team)
 - [License](#license)
 
 ## Project Overview
 
-FinSignal is a small financial transaction-monitoring prototype. Its primary backend is a Flask application that defines user registration and login, email-delivered time-based one-time passwords (TOTP), a transaction history backed by SQLite through Flask-SQLAlchemy, and a simple description-based fraud flag.
+`app.py` contains a Flask application configured to use SQLite through Flask-SQLAlchemy. It defines `User` and `Transaction` models, registration and login routes, TOTP verification using PyOTP, and email sending through Flask-Mail.
 
-An authenticated user can record a transaction with an amount and description. The backend checks the description for a short set of suspicious keywords, stores a boolean flag with the transaction, and attempts to email an alert. A separate PhonePe-labelled endpoint accepts transaction details and sends an email notification; the code does not implement a verified PhonePe integration. An IMAP polling routine is also present in the Flask source.
+The `/add_transaction` route reads `amount` and `description` from JSON, calls `detect_fraud`, stores a transaction, attempts to send email, and returns JSON containing a status and fraud flag. `detect_fraud` checks the lowercased description for `scam`, `fraud`, `phishing`, or `hack`.
 
-The code is relevant to FinTech as an early demonstration of transaction logging and basic risk flagging. The decision is a keyword match, not a trained fraud model or a comprehensive financial risk assessment. The intended user represented by the code is an account holder reviewing their own recorded transactions.
+The `/phonepe_notify` route reads `email`, `amount`, and `description`, then attempts to record a transaction and send email for a matching account. The Flask source also defines an IMAP polling function that checks for transaction-related email and extracts an amount.
 
-The repository also contains Pydantic schema modules, tests for a proposed API/middleware package, a FastAPI entry point that imports modules not present in this checkout, and React/Tailwind UI fragments. These artifacts are not wired into the Flask application and should not be read as a functioning second application or as proof of the API and security capabilities described in the earlier design document.
-
-## Problem Statement
-
-The implemented problem is limited to recording transaction details and highlighting descriptions containing one of four configured terms: `scam`, `fraud`, `phishing`, or `hack`. This can surface obvious matching text for review, but it does not detect suspicious URLs, assess transaction behavior, or establish that a transaction is fraudulent.
-
-## Objectives
-
-- Provide a basic account registration and sign-in flow with an email-delivered TOTP step.
-- Record user-associated transactions and show transaction history in the dashboard flow.
-- Apply a transparent keyword rule to selected transaction descriptions.
-- Send email notifications from transaction-related code paths when mail delivery is configured.
+Other repository files contain Pydantic schema modules, a FastAPI entry point, middleware tests, and React/Tailwind fragments.
 
 ## Key Features
 
-| Feature | Description | Implementation |
+| Code path | What the source defines | Location |
 |---|---|---|
-| Account registration | Creates a user record from submitted email and password fields. | Flask route and SQLAlchemy `User` model in `app.py`. |
-| Login with email OTP | Checks submitted credentials, then requests a TOTP code by email before logging in. | Flask-Login session flow and PyOTP in `app.py`; email uses Flask-Mail configuration. |
-| Transaction recording | Stores an amount and description for the signed-in user. | `POST /add_transaction` and the SQLite-backed `Transaction` model in `app.py`. |
-| Keyword fraud flag | Sets a boolean flag when a description contains one of the configured suspicious terms. | `detect_fraud` in `app.py`; simple lowercase substring matching. |
-| Transaction history | Queries the current user's transactions in descending timestamp order for the dashboard. | SQLAlchemy query in the Flask dashboard handler. |
-| Email transaction notice | Attempts to send an email after the manual transaction and PhonePe-labelled notification paths. | Flask-Mail helper in `app.py`; SMTP settings are hard-coded examples and require configuration. |
-| PhonePe-labelled notification endpoint | Accepts an email, amount, and description, then records a transaction and emails the addressed user. | `POST /phonepe_notify`; the source does not verify webhook signatures or identify this as a production payment integration. |
-| IMAP transaction polling | Polls an inbox and looks for messages with “transaction” in the subject or body, then extracts a numeric amount. | `monitor_email_transactions` and `extract_amount` in `app.py`; requires working mailbox configuration. |
+| Registration | Reads email and password form values and adds a `User` record. | `/register` in `app.py`. |
+| Login and TOTP | Compares submitted credentials and uses PyOTP to verify a code. | `/login`, `/two_factor`, and helper functions in `app.py`. |
+| Transaction entry | Reads amount and description from JSON, calls `detect_fraud`, stores a `Transaction`, and returns JSON. | `POST /add_transaction` in `app.py`. |
+| Description check | Lowercases text and checks for four configured substrings. | `detect_fraud` in `app.py`. |
+| Transaction listing | Queries the current user's transactions in descending timestamp order. | Dashboard handler in `app.py`. |
+| Email | Calls Flask-Mail for OTP and transaction-related messages. | `send_email` and its call sites in `app.py`. |
+| PhonePe-labelled route | Reads email, amount, and description, then creates a transaction for a matching user. | `POST /phonepe_notify` in `app.py`. |
+| IMAP polling | Searches unseen messages for “transaction” in the subject or body and calls the amount extractor. | `monitor_email_transactions` and `extract_amount` in `app.py`. |
 
 ## End-to-End Workflow
 
-The diagram describes the paths declared in `app.py`. The source declares duplicate Flask routes for several URLs and also references template files that are not in the repository; see [Limitations](#limitations) before treating these flows as runnable end to end.
+The diagram summarizes calls and data access declared in `app.py`; it does not indicate that the prototype was completed or verified end to end.
 
 ```mermaid
 flowchart TD
@@ -162,13 +154,13 @@ flowchart TB
     end
 ```
 
-The second group is shown to make the repository boundaries explicit. No connection from those fragments to the Flask request flow is present in this checkout.
+The lower group lists other repository artifacts; the files shown do not form part of the Flask route flow in `app.py`.
 
 ## Technology Stack
 
 ### Logo Strip
 
-The badges below describe technologies imported or configured by repository files. React and Tailwind are present as UI fragments/configuration, not as a packaged frontend application.
+The badges indicate technologies named in repository imports or configuration. Their presence does not imply a complete frontend or API application.
 
 ![Python](https://img.shields.io/badge/Python-source-3776ab?logo=python&logoColor=white)
 ![Flask](https://img.shields.io/badge/Flask-primary%20backend-222222?logo=flask&logoColor=white)
@@ -188,7 +180,7 @@ The badges below describe technologies imported or configured by repository file
 | UI fragments | React, React Router, Tailwind CSS, Radix UI, Framer Motion, Lucide, Base44 SDK | Imports/configuration appear in loose JSX/JavaScript files. No package manifest or matching application source tree is present. |
 | Tests | pytest | `test_schemes.py` contains Pydantic schema tests; `middleware.py` contains API middleware tests that depend on absent `app.*` modules. |
 
-No package or dependency manifest is included, so versions and a complete installable stack cannot be established from the repository.
+No package or dependency manifest is present in the repository.
 
 ## Project Structure
 
@@ -229,14 +221,14 @@ track1_MasterVibe/
 
 ## Authentication and Security
 
-Implemented in the Flask source:
+The Flask source contains:
 
 - Flask-Login is used to establish and check a signed-in session on selected routes.
 - PyOTP creates a TOTP secret per registered account and verifies submitted codes.
 - Flask-Mail is used to send the TOTP and transaction messages when configured.
 - The dashboard, transaction-entry, bank-details update, guide, tutorial, and logout handlers are decorated with `login_required` in the primary Flask declarations.
 
-Important limitations of the current code:
+The Flask source also contains:
 
 - The Flask registration path stores the submitted password directly and login compares it directly; password hashing is not implemented.
 - Flask's `SECRET_KEY` and mail settings are assigned in source as example values/placeholders rather than read from environment configuration. No actual credential values are reproduced here.
@@ -244,11 +236,9 @@ Important limitations of the current code:
 - The FastAPI JWT/authentication material is not an implemented control in this checkout: the referenced `app.middleware` and `app.config` modules are absent. `middleware.py` is test code that expects those modules.
 - The `biometric_analysis` file is pseudocode; no biometric verification implementation is present.
 
-This code is a prototype and is not suitable for handling real credentials, bank details, or payment events.
-
 ## Fraud Detection Workflow
 
-The implemented check receives a transaction description, converts it to lowercase, and tests whether it contains any of `scam`, `fraud`, `phishing`, or `hack`. The first match returns `True`; otherwise it returns `False`. In the manual transaction path, that boolean is stored in `Transaction.fraud_flag` and included in the JSON response. The source also attempts to include the result in email text.
+The `detect_fraud` function receives a description, converts it to lowercase, and checks for `scam`, `fraud`, `phishing`, or `hack`. It returns `True` when a term is found and `False` otherwise. The `/add_transaction` route stores the returned value in `Transaction.fraud_flag` and includes it in its JSON response.
 
 ```mermaid
 flowchart LR
@@ -261,26 +251,26 @@ flowchart LR
     F --> G[Return status and flag]
 ```
 
-There is no scoring model, training data, URL inspection, domain reputation lookup, behavioral analysis, or review/appeal workflow in the primary Flask implementation. The schemas and algorithmic text elsewhere in the repository do not implement those features.
+This function checks those four substrings and returns a boolean; it does not calculate a numeric score.
 
 ## Database and Data Flow
 
-The primary Flask app configures SQLite through Flask-SQLAlchemy. When run as a script, `app.py` calls `db.create_all()` in its application context. No database file is checked in; the configured SQLite database is created at runtime if startup succeeds.
+The Flask app configures SQLite through Flask-SQLAlchemy. Its script entry point calls `db.create_all()` in the application context. No database file is present in the repository.
 
 | Model | Fields represented in the Flask source | Flow |
 |---|---|---|
 | `User` | Integer ID, email, password, OTP secret, PhonePe-notification preference, bank-details text | Registration writes a user; login and OTP verification read it; bank-details update modifies it. |
 | `Transaction` | Integer ID, user ID, amount, description, timestamp, fraud flag | Manual entry and the PhonePe-labelled path write transaction rows; dashboard queries the current user's rows by descending timestamp. |
 
-The model relationships are represented by `Transaction.user_id` referring to `user.id`; the source does not declare a SQLAlchemy relationship property. Separate Pydantic schemas describe additional fields and entities, but they are not database models used by this Flask app.
+`Transaction.user_id` is declared as a foreign key to `user.id`. The Pydantic schema files are separate from these Flask-SQLAlchemy model declarations.
 
 ## Installation and Setup
 
-The repository does not include `requirements.txt`, `pyproject.toml`, a lockfile, `package.json`, or an environment example. Consequently, it does not provide a verifiable dependency-install command or reproducible clean setup. Python is required for the Flask source; exact supported versions and dependency versions are not declared.
+The repository does not include `requirements.txt`, `pyproject.toml`, a lockfile, `package.json`, or an environment example. Dependency versions are not specified.
 
-The source imports Flask, Flask-SQLAlchemy, Flask-Login, Flask-Mail, and PyOTP in `app.py`. Additional standalone files import Pydantic and frontend packages. This list is based on imports only; it is not a maintained dependency specification.
+`app.py` imports Flask, Flask-SQLAlchemy, Flask-Login, Flask-Mail, and PyOTP. Other source files import Pydantic and JavaScript UI packages.
 
-There is no environment-variable configuration documented or implemented in the repository. The Flask app sets its secret and email configuration directly in source, with example placeholders. Do not use those values for a real deployment.
+The Flask app assigns its secret and mail settings directly in `app.py`; environment-variable configuration is not present in the repository. Secret and mail values are intentionally omitted here.
 
 ## Running the Application
 
@@ -290,13 +280,13 @@ There is no environment-variable configuration documented or implemented in the 
 python app.py
 ```
 
-This command is not a guarantee that the checked-in prototype starts or serves each page successfully: dependencies are undeclared, the main route handlers reference template files that are absent, and duplicate route declarations exist. The code does not specify a host or port, so this README does not promise a local URL.
+The app's successful startup and page behavior have not been verified. The source contains duplicate route declarations and refers to template files that are not present in the repository.
 
-`main.py` includes a docstring suggesting an Uvicorn command, but its import path and required `app.*` modules do not match the files present in this repository; it is not presented as a runnable server command.
+`main.py` contains a Uvicorn command in its docstring and imports `app.*` modules that are not present in the repository.
 
 ## API Overview
 
-The following are Flask route declarations in `app.py`, not a claim that every route is currently reachable without error. Several paths (`/register`, `/login`, `/two_factor`, `/dashboard`, `/user_guide`, `/tutorials`, `/update_bank_details`, and `/logout`) are registered more than once. The first declarations render absent template files, while later declarations attempt inline rendering. Resolve this conflict and verify page behavior before relying on these paths.
+The table lists route declarations in `app.py`. Several paths are registered more than once in that file. This section records source declarations; it does not assert that every route runs successfully.
 
 | Method | Path | Declared behavior |
 |---|---|---|
@@ -311,11 +301,11 @@ The following are Flask route declarations in `app.py`, not a claim that every r
 | `GET` | `/logout` | Ends the Flask-Login session. |
 | `POST` | `/phonepe_notify` | Reads `email`, `amount`, and `description`; records for a matching user and sends an email. No signature verification is implemented. |
 
-The `/api/...` paths mentioned in the old design document are not implemented as route handlers in the files present here. `main.py` refers to routers in missing modules.
+`main.py` imports API routers from modules that are not present in the repository. The Flask routes listed above use non-`/api` paths.
 
 ## Screenshots and Demo
 
-No screenshot or demo image assets are included in the repository.
+No screenshot or demo image files are present in the repository.
 
 ### Application Interface
 
@@ -327,7 +317,7 @@ No screenshot or demo image assets are included in the repository.
 
 ## Hackathon Build Context
 
-The MasterVibe team was selected through Level 1 screening and nominated to the offline building level. The team developed FinSignal during the 8-hour Track 1 FinTech offline build phase at Vidyavardhaka College of Engineering, Mysore, as part of Vibeathon by Mind Mesh.
+MasterVibe was selected through Level 1 screening and nominated to the offline building level. The team developed the FinSignal prototype during the 8-hour Track 1 FinTech build phase at Vidyavardhaka College of Engineering, Mysore, as part of Vibeathon by Mind Mesh. This was the team's first hackathon.
 
 ## Limitations
 
@@ -335,30 +325,21 @@ The MasterVibe team was selected through Level 1 screening and nominated to the 
 - The primary Flask application has duplicate URL rules and refers to template names under a templates directory that is absent from the repository.
 - `main.py`, `dabase.py`, and the middleware tests refer to an `app.*` package tree that is not present. Therefore, the FastAPI/API scaffolding cannot be verified as a runnable service here.
 - The React/Tailwind files are loose fragments with unresolved imports and no build setup; they are not demonstrated as the frontend for the Flask app.
-- The fraud check is a four-keyword substring rule. It can miss fraud and flag benign descriptions; it should not be used as a financial decision system.
+- The fraud check in `app.py` is a four-keyword substring rule that returns a boolean.
 - Passwords are stored without hashing in the Flask implementation. Configuration is hard-coded, the app enables Flask debug mode in its script entry point, and the PhonePe-labelled endpoint has no webhook signature validation.
 - Email/IMAP behavior depends on external account configuration that is not supplied or safely externalized in the repository.
 - No license file, screenshots, deployed endpoint, or verified deployment instructions are included.
-
-## Future Enhancements
-
-These are recommendations, not implemented features.
-
-| Enhancement | Purpose |
-|---|---|
-| Consolidate the application entry point, routes, templates, and data models | Make the existing prototype installable and testable as one application. |
-| Add dependency manifests and safe environment-based configuration | Enable repeatable setup and remove secrets/configuration from source. |
-| Hash passwords and review session, request-forgery, and authorization controls | Establish a stronger baseline before handling real user data. |
-| Authenticate and validate payment-provider callbacks | Prevent unauthenticated transaction submissions and support a genuine provider integration. |
-| Evaluate fraud rules against representative data and add explainable risk review | Measure false positives/negatives before considering richer detection. |
-| Complete or remove the separate FastAPI and React fragments | Avoid implying integrations that are not present and provide a coherent application path. |
-| Add verified screenshots and documented test/run procedures | Make the project easier to evaluate and reproduce. |
 
 ## Team
 
 **MasterVibe**
 
-Members: Nisarga NS, Neha Anjum, Neha BP, and Nikhitha.
+| Member | Role |
+|---|---|
+| Nisarga NS | Team Lead |
+| Neha Anjum | Team Member |
+| Neha BP | Team Member |
+| Nikhitha | Team Member |
 
 GitHub organization: **VectorFlow-vvce**. No individual profile links or repository URL are specified here.
 
