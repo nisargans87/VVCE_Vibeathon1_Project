@@ -1,4 +1,4 @@
-# MasterVibe - FinTech Transaction Monitoring Prototype
+# FinSignal - FinTech Transaction Monitoring Prototype
 
 **A hackathon prototype for recording transactions, flagging descriptions that contain selected suspicious terms, and sending email notifications.**
 
@@ -17,7 +17,8 @@
 | Attribute | Details |
 |---|---|
 | Hackathon | Vibeathon by Mind Mesh |
-| Project / Team | MasterVibe |
+| Project | FinSignal |
+| Team | MasterVibe |
 | Track | Track 1 |
 | Domain | FinTech |
 | Venue | Vidyavardhaka College of Engineering, Mysore |
@@ -73,7 +74,7 @@ The repository contains prototype code and additional partial artifacts. It does
 
 ## Project Overview
 
-MasterVibe is a small financial transaction-monitoring prototype. Its primary backend is a Flask application that defines user registration and login, email-delivered time-based one-time passwords (TOTP), a transaction history backed by SQLite through Flask-SQLAlchemy, and a simple description-based fraud flag.
+FinSignal is a small financial transaction-monitoring prototype. Its primary backend is a Flask application that defines user registration and login, email-delivered time-based one-time passwords (TOTP), a transaction history backed by SQLite through Flask-SQLAlchemy, and a simple description-based fraud flag.
 
 An authenticated user can record a transaction with an amount and description. The backend checks the description for a short set of suspicious keywords, stores a boolean flag with the transaction, and attempts to email an alert. A separate PhonePe-labelled endpoint accepts transaction details and sends an email notification; the code does not implement a verified PhonePe integration. An IMAP polling routine is also present in the Flask source.
 
@@ -326,7 +327,7 @@ No screenshot or demo image assets are included in the repository.
 
 ## Hackathon Build Context
 
-MasterVibe was selected through Level 1 screening and nominated to the offline building level. The team developed this Track 1 FinTech project during the 8-hour offline build phase at Vidyavardhaka College of Engineering, Mysore, as part of Vibeathon by Mind Mesh.
+The MasterVibe team was selected through Level 1 screening and nominated to the offline building level. The team developed FinSignal during the 8-hour Track 1 FinTech offline build phase at Vidyavardhaka College of Engineering, Mysore, as part of Vibeathon by Mind Mesh.
 
 ## Limitations
 
